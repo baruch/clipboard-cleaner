@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build and Release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: clipboard-cleaner
+            asset_name: clipboard-cleaner-linux-x86_64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_name: clipboard-cleaner
+            asset_name: clipboard-cleaner-darwin-x86_64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: clipboard-cleaner
+            asset_name: clipboard-cleaner-darwin-aarch64
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Build
+      run: cargo build --release --target ${{ matrix.target }}
+
+    - name: Create archive
+      run: |
+        mkdir release
+        cp target/${{ matrix.target }}/release/${{ matrix.artifact_name }} release/
+        cd release
+        if [[ "${{ runner.os }}" == "Windows" ]]; then
+          7z a ../${{ matrix.asset_name }}.zip ${{ matrix.artifact_name }}.exe
+        else
+          tar czf ../${{ matrix.asset_name }}.tar.gz ${{ matrix.artifact_name }}
+        fi
+
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: ${{ matrix.asset_name }}.tar.gz
+        asset_name: ${{ matrix.asset_name }}.tar.gz
+        tag: ${{ github.ref }}
+        overwrite: true
