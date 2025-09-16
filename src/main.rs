@@ -23,7 +23,7 @@ struct ClipboardCleaner {
 impl ClipboardCleaner {
     fn new(config: Config) -> Result<Self> {
         let ctx = ClipboardContext::new()
-            .map_err(|e| anyhow::anyhow!("Failed to initialize clipboard context: {}", e))?;
+            .map_err(|e| anyhow::anyhow!("Failed to initialize clipboard context: {e}"))?;
         let last_content = Arc::new(Mutex::new(String::new()));
         let running = Arc::new(AtomicBool::new(true));
 
@@ -53,13 +53,13 @@ impl ClipboardHandler for ClipboardCleaner {
                 let cleaned = clean_content(&content);
 
                 if self.config.verbose {
-                    info!("Original: {:?}", content);
-                    info!("Cleaned: {:?}", cleaned);
+                    info!("Original: {content:?}");
+                    info!("Cleaned: {cleaned:?}");
                 }
 
                 if cleaned != content {
                     if self.config.dry_run {
-                        println!("Would clean: {:?} -> {:?}", content, cleaned);
+                        println!("Would clean: {content:?} -> {cleaned:?}");
                     } else {
                         match self.ctx.set_text(cleaned.clone()) {
                             Ok(_) => {
@@ -69,7 +69,7 @@ impl ClipboardHandler for ClipboardCleaner {
                                 }
                             }
                             Err(e) => {
-                                error!("Failed to set clipboard: {}", e);
+                                error!("Failed to set clipboard: {e}");
                             }
                         }
                     }
@@ -80,7 +80,7 @@ impl ClipboardHandler for ClipboardCleaner {
                 *last_content = content;
             }
             Err(e) => {
-                warn!("Failed to get clipboard content: {}", e);
+                warn!("Failed to get clipboard content: {e}");
             }
         }
     }
@@ -107,7 +107,7 @@ fn main() -> Result<()> {
     let cleaner = ClipboardCleaner::new(config)?;
 
     let mut watcher = ClipboardWatcherContext::new()
-        .map_err(|e| anyhow::anyhow!("Failed to initialize clipboard watcher: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to initialize clipboard watcher: {e}"))?;
     let _watcher_shutdown = watcher.add_handler(cleaner).get_shutdown_channel();
 
     info!("Clipboard cleaner is now running. Press Ctrl+C to stop.");
